@@ -1,6 +1,6 @@
-/**
+/*
  * StereoKartinki v1.0 - Shows stereo images and image sequences
- * Copyright 2010-2013, Leonid Ovcharenko - http://leonidovcharenko.ru
+ * Copyright 2010-2015, Leonid Ovcharenko - http://leonidovcharenko.ru
  * Released under the MIT license
  */
 
@@ -8,6 +8,7 @@
 	var plugin = {};
 	var defaults = {
 		joined: false,
+		pingpong: true,
 		frames: 2,
 		speed: 125
 	}
@@ -38,7 +39,7 @@
 			else { stereo.settings.frames = stereo.images.length; }
 			stereo.frame = -1;
 			stereo.direction = 1;
-
+			
 			// preload all images, then perform final DOM / CSS modifications that depend on images being loaded
 			el.children().imagesLoaded(function(){
 				var w = stereo.images.width();
@@ -58,26 +59,46 @@
 				el.css({ 'width':width, 'height':h }).addClass('ui-stereo');
 				stereo.slides = el.find('.stereo-slides');
 			});
+			
+			// style
+			if (!$('#stereo-ui-styles').length) {
+				$('body').append('<style id="stereo-ui-styles" type="text/css">\
+					.ui-stereo img{border:none;margin:0;}\
+					.ui-stereo{position:relative;overflow:hidden;width:16px;height:16px;}\
+					.ui-stereo>.stereo-slides{position:absolute;top:0;}\
+				</style>')
+			}
 		}
 		var run = function(){
+			if (stereo.settings.pingpong) {
+				var next = function(){
+					var posl = -stereo.slides.position().left;
+					stereo.frame += stereo.direction*1;
+					var offs = stereo.frame*el.width();
+					// change direction if needed
+					if (stereo.frame==0) stereo.direction = 1;
+					if (stereo.frame==(stereo.settings.frames-1)) stereo.direction = -1;
+				}
+			}
+			else {
+				var next = function(){
+					stereo.frame = (stereo.frame+1) % stereo.settings.frames
+				}
+			}
 			stereo.shows = setInterval(
 			function (){
-				var posl = -stereo.slides.position().left;
-				stereo.frame += stereo.direction*1;
-				var offs = stereo.frame*el.width();
+				next()
+				var offs = stereo.frame * el.width()
 				// change picture
 				offs = -offs+'px';
 				stereo.slides.css('left',offs);
-				// change direction if needed
-				if (stereo.frame==0) stereo.direction = 1;
-				if (stereo.frame==(stereo.settings.frames-1)) stereo.direction = -1;
 			} ,stereo.settings.speed);
 		}
 		var stop = function(){
 			clearInterval(stereo.shows);
 		}
 		init();
-		el.bind('mouseover',run).bind('mouseout',stop);
+		el.on('mouseover touchstart',run).on('mouseout touchend',stop);
 		return this;
 	}
 })(jQuery);
